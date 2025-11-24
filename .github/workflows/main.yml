@@ -2,7 +2,7 @@ name: Auto Home Design Generator
 
 on:
   schedule:
-    - cron: "0 2 * * *"   # 每天 UTC 2 点
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
