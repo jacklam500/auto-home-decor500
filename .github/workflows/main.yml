@@ -1,0 +1,105 @@
+name: Auto Home Design Generator
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # 每天 UTC 2 点自动运行，可自行修改
+  workflow_dispatch:       # 允许手动运行
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          pip install requests pillow
+
+      - name: Generate Image with HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir -p outputs
+
+          PROMPT="luxury modern living room interior, warm wood panels, marble textures, soft natural light, high-end furniture, elegant composition, DSLR realism"
+
+          python3 <<EOF
+import requests
+import base64
+import json
+
+API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"  # 免费模型
+
+headers = {"Authorization": f"Bearer $HF_TOKEN"}
+
+payload = {
+    "inputs": PROMPT,
+    "parameters": {
+        "height": 1024,
+        "width": 768,
+        "guidance_scale": 3.5
+    }
+}
+
+response = requests.post(API_URL, headers=headers, json=payload)
+
+if response.status_code != 200:
+    print("Error:", response.text)
+    exit()
+
+# 保存图片
+image_bytes = response.content
+with open("outputs/home_design.png", "wb") as f:
+    f.write(image_bytes)
+
+print("Image saved!")
+EOF
+
+      - name: Generate Caption
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python3 <<EOF
+import requests
+
+API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct"
+headers = {"Authorization": f"Bearer $HF_TOKEN"}
+
+prompt = """
+请为下面这张家居设计图写一段适合发布在社交平台（如抖音/小红书）的文案，
+要求：
+- 高级感
+- 简短
+- 不夸张
+- 强调木纹高级、光影氛围、软装搭配
+
+输出格式：
+【文案】
+"""
+
+data = {"inputs": prompt}
+
+res = requests.post(API_URL, headers=headers, json=data)
+text = res.json()[0]["generated_text"]
+
+with open("outputs/caption.txt", "w", encoding="utf-8") as f:
+    f.write(text)
+
+print("Caption generated!")
+EOF
+
+      - name: Commit Results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add outputs/*
+          git commit -m "Auto-generated home design content" || echo "No changes"
+          git push
