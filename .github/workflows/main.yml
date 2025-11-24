@@ -2,7 +2,7 @@ name: Auto Home Design Generator
 
 on:
   schedule:
-    - cron: "0 2 * * *"   # 每天 UTC 2 点运行
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -27,15 +27,16 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           mkdir -p outputs
-
+          PROMPT="luxury modern living room interior, warm wood panels, marble textures, soft natural light, high-end furniture, elegant composition, DSLR realism"
           python3 <<EOF
 import requests
+import base64
 
 API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
-headers = {"Authorization": f"Bearer ${HF_TOKEN}"}
+headers = {"Authorization": f"Bearer { '${{ secrets.HF_TOKEN }}' }"}
 
 payload = {
-    "inputs": "modern luxury living room, warm lighting, high-end interior, natural wood tones, marble textures, cinematic photo, 4k",
+    "inputs": """luxury modern living room interior, warm wood panels, marble textures, soft natural light, high-end furniture, elegant composition, DSLR realism""",
     "parameters": {
         "height": 1024,
         "width": 768,
@@ -63,25 +64,23 @@ EOF
 import requests
 
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct"
-headers = {"Authorization": f"Bearer ${HF_TOKEN}"}
+headers = {"Authorization": f"Bearer { '${{ secrets.HF_TOKEN }}' }"}
 
 prompt = """
-请为这张家居设计图写一段适合小红书/抖音的文案，要求：
-- 有高级感
-- 真实自然
-- 20 字以内
-- 强调氛围、光影、质感
+请为下面这张家居设计图写一段适合发布在社交平台（如抖音/小红书）的文案，
+要求：
+- 高级感
+- 简短
+- 不夸张
+- 强调木纹高级、光影氛围、软装搭配
+
 输出格式：
 【文案】
 """
 
 data = {"inputs": prompt}
 res = requests.post(API_URL, headers=headers, json=data)
-
-try:
-    text = res.json()[0]["generated_text"]
-except:
-    text = "高品质家居空间，让生活更舒适。"
+text = res.json()[0]["generated_text"]
 
 with open("outputs/caption.txt", "w", encoding="utf-8") as f:
     f.write(text)
@@ -93,7 +92,6 @@ EOF
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-
           git add outputs/*
           git commit -m "Auto-generated home design content" || echo "No changes"
           git push
