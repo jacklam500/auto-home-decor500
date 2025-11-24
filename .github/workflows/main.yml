@@ -2,7 +2,7 @@ name: Auto Home Design Generator
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 2 * * *"   # 每天 UTC 2 点
   workflow_dispatch:
 
 jobs:
@@ -26,13 +26,11 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          mkdir -p outputs
-          python3 << 'EOF'
+python3 << 'EOF'
 import requests
 import os
 
 HF_TOKEN = os.environ["HF_TOKEN"]
-
 API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
@@ -40,11 +38,7 @@ prompt = "luxury modern living room interior, warm wood panels, marble textures,
 
 payload = {
     "inputs": prompt,
-    "parameters": {
-        "height": 1024,
-        "width": 768,
-        "guidance_scale": 3.5
-    }
+    "parameters": {"height": 1024, "width": 768, "guidance_scale": 3.5}
 }
 
 response = requests.post(API_URL, headers=headers, json=payload)
@@ -63,22 +57,21 @@ EOF
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python3 << 'EOF'
+python3 << 'EOF'
 import requests
 import os
 
 HF_TOKEN = os.environ["HF_TOKEN"]
-
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct"
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 prompt = """
-请为下面这张家居设计图写一段适合社交平台发布的文案：
+请为下面这张家居设计图写一段适合发布在社交平台（如抖音/小红书）的文案，
 要求：
 - 高级感
 - 简短
 - 不夸张
-- 强调木纹、光影、软装搭配
+- 强调木纹高级、光影氛围、软装搭配
 输出格式：
 【文案】
 """
